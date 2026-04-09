@@ -2,8 +2,8 @@ name: Daily YouTube Short Upload
 
 on:
   schedule:
-    - cron: '0 10 * * *'  # Runs daily at 10:00 AM UTC
-  workflow_dispatch:       # Allows manual trigger from GitHub UI
+    - cron: '0 10 * * *'
+  workflow_dispatch:
 
 jobs:
   upload:
@@ -20,16 +20,20 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Install FFmpeg (cached)
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        id: setup-ffmpeg
+        with:
+          ffmpeg-version: release
+
       - name: Install dependencies
         run: npm ci
-
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Run YouTube automation
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
