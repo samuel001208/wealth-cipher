@@ -2,7 +2,7 @@ name: Daily YouTube Short Upload
 
 on:
   schedule:
-    - cron: '0 10 * * *'
+        - cron: '0 18 * * *'  # Runs at 7:00 PM Lagos time (WAT)
   workflow_dispatch:
 
 jobs:
