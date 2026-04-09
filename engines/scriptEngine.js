@@ -24,7 +24,7 @@ async function generateScript() {
     const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
     console.log('Topic selected:', topic);
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
 
     const prompt = `You are a scriptwriter for a dark psychology and wealth YouTube Shorts channel called "Wealth Cipher".
 
