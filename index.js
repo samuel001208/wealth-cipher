@@ -94,6 +94,7 @@ async function runPipeline() {
     logEntry.error = err.message;
     addLogEntry(logEntry);
     await sendFailure({ engine: 'pipeline', error: err.message });
+    process.exit(1);
   }
 }
 
