@@ -49,7 +49,7 @@ async function generateScript() {
   const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
   console.log('Selected topic:', topic);
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   const scriptPrompt = `Write a powerful, engaging YouTube Shorts script about: "${topic}"
 
