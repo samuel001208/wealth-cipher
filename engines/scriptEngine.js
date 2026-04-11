@@ -108,7 +108,6 @@ SEGMENT_6: [sentence]`;
   console.log('Script saved to:', scriptPath);
 
   return { topic, segments, fullScript, title: title.trim(), description: description.trim(), tags, scriptPath };
-}
 
   } catch (err) {
     throw {

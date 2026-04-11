@@ -81,7 +81,6 @@ async function fetchVideosForSegments(segments) {
   }
 
   return videoPaths;
-}
 
   } catch (err) {
     throw {

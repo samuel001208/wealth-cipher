@@ -51,7 +51,6 @@ async function uploadToYouTube({ videoPath, title, description, tags }) {
     console.error('uploadEngine error:', err.message);
     throw err;
   }
-}
 
   } catch (err) {
     throw {

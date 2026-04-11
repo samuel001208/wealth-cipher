@@ -1,48 +1,49 @@
 const fs = require('fs');
 
-// ─────────────────────────────────────────────
-// HELPER: wrap the outermost async function body
-// with a step-aware try/catch
-// ─────────────────────────────────────────────
-function wrapEngine(filePath, funcName, stepName) {
+const engines = [
+  'engines/scriptEngine.js',
+  'engines/uploadEngine.js',
+  'engines/videoEngine.js',
+  'engines/voiceEngine.js',
+];
+
+engines.forEach(filePath => {
   let src = fs.readFileSync(filePath, 'utf8');
 
-  // Find the opening brace of the exported async function
-  const funcRegex = new RegExp(
-    `(async function ${funcName}\\([^)]*\\)\\s*\\{)`
-  );
+  // The patch inserted try { at the top of the function body,
+  // but left the original function closing } still in the file,
+  // creating: return x; \n } \n\n } catch (err) { 
+  // We need to remove that stray } that sits alone before the catch block.
 
-  if (!funcRegex.test(src)) {
-    console.log(`[SKIP] ${filePath}: could not find function ${funcName}`);
-    return;
+  const lines = src.split('\n');
+  const fixed = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const nextNonEmpty = lines.slice(i + 1).find(l => l.trim() !== '');
+
+    // If this line is just a lone } and the next non-empty line starts with } catch
+    if (
+      line.trim() === '}' &&
+      nextNonEmpty &&
+      nextNonEmpty.trim().startsWith('} catch')
+    ) {
+      // Skip this stray }
+      console.log(`  Removed stray } at line ${i + 1} in ${filePath}`);
+      i++;
+      continue;
+    }
+
+    fixed.push(line);
+    i++;
   }
 
-  // Already patched? Don't double-wrap.
-  if (src.includes(`step: '${stepName}'`)) {
-    console.log(`[SKIP] ${filePath}: already patched with ${stepName}`);
-    return;
+  const result = fixed.join('\n');
+  if (result !== src) {
+    fs.writeFileSync(filePath, result, 'utf8');
+    console.log(`[FIXED] ${filePath}`);
+  } else {
+    console.log(`[NO CHANGE] ${filePath}`);
   }
-
-  // Insert try { after the function opening brace
-  src = src.replace(funcRegex, `$1\n  try {`);
-
-  // Find module.exports line and insert catch block before it
-  src = src.replace(
-    /^(module\.exports\s*=\s*\{[^}]+\};\s*)$/m,
-    `  } catch (err) {\n    throw {\n      step: '${stepName}',\n      message: err.message || String(err),\n      details: {\n        code: err.code || null,\n        status: (err.response && err.response.status) || null,\n      },\n    };\n  }\n}\n\n$1`
-  );
-
-  fs.writeFileSync(filePath, src, 'utf8');
-  console.log(`[DONE] ${filePath} patched with step: ${stepName}`);
-}
-
-// ─────────────────────────────────────────────
-// Patch each engine
-// ─────────────────────────────────────────────
-wrapEngine('engines/scriptEngine.js', 'generateScript', 'SCRIPT_ENGINE');
-wrapEngine('engines/pexelsEngine.js', 'fetchVideosForSegments', 'PEXELS_ENGINE');
-wrapEngine('engines/voiceEngine.js', 'generateVoice', 'VOICE_ENGINE');
-wrapEngine('engines/videoEngine.js', 'buildVideo', 'VIDEO_ENGINE');
-wrapEngine('engines/uploadEngine.js', 'uploadToYouTube', 'UPLOAD_ENGINE');
-
-console.log('\nAll engines patched successfully.');
+});

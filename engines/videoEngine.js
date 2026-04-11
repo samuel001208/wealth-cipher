@@ -96,7 +96,6 @@ async function buildVideo(videoPaths, voicePath) {
       })
       .run();
   });
-}
 
   } catch (err) {
     throw {

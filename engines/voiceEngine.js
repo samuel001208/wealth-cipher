@@ -48,7 +48,6 @@ async function generateVoice(scriptText) {
     console.error('voiceEngine error:', err.message);
     throw err;
   }
-}
 
   } catch (err) {
     throw {
