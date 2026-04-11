@@ -9,6 +9,7 @@ const AUDIO_DIR = path.join(__dirname, '../storage/audio');
 
 async function generateVoice(scriptText) {
   try {
+  try {
     console.log('Generating voiceover with ElevenLabs...');
 
     const response = await axios({
@@ -46,6 +47,18 @@ async function generateVoice(scriptText) {
   } catch (err) {
     console.error('voiceEngine error:', err.message);
     throw err;
+  }
+}
+
+  } catch (err) {
+    throw {
+      step: 'VOICE_ENGINE',
+      message: err.message || String(err),
+      details: {
+        code: err.code || null,
+        status: (err.response && err.response.status) || null,
+      },
+    };
   }
 }
 

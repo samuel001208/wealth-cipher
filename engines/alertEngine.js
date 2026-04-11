@@ -1,5 +1,5 @@
-require('dotenv').config();
 const axios = require('axios');
+require('dotenv').config();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -17,14 +17,30 @@ async function sendAlert(message) {
   }
 }
 
-async function sendSuccess({ title, videoUrl }) {
-  const msg = `✅ *New Short Uploaded!*\n\n*Title:* ${title}\n*URL:* ${videoUrl}\n\n_Wealth Cipher is growing_ 🚀`;
-  await sendAlert(msg);
+function sendSuccess({ title, videoUrl }) {
+  const msg =
+    `✅ *Wealth Cipher — Upload Success!*\n\n` +
+    `*Title:* ${title}\n` +
+    `*URL:* ${videoUrl}\n` +
+    `*Time:* ${new Date().toISOString()}`;
+  return sendAlert(msg);
 }
 
-async function sendFailure({ engine, error }) {
-  const msg = `❌ *Upload Failed!*\n\n*Engine:* ${engine}\n*Error:* ${error}\n\n_Will retry tomorrow automatically._`;
-  await sendAlert(msg);
+function sendFailure({ step, message, details }) {
+  let extra = '';
+  if (details) {
+    if (details.code) extra += `\n*Code:* ${details.code}`;
+    if (details.status) extra += `\n*Status:* ${details.status}`;
+    if (details.type) extra += `\n*Type:* ${details.type}`;
+  }
+
+  const msg =
+    `❌ *Wealth Cipher — FAILED*\n\n` +
+    `*Step:* ${step}\n` +
+    `*Error:* ${message}` +
+    extra +
+    `\n*Time:* ${new Date().toISOString()}`;
+  return sendAlert(msg);
 }
 
 module.exports = { sendSuccess, sendFailure };

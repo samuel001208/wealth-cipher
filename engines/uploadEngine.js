@@ -17,6 +17,7 @@ function getOAuthClient() {
 
 async function uploadToYouTube({ videoPath, title, description, tags }) {
   try {
+  try {
     console.log('Uploading to YouTube...');
     const auth = getOAuthClient();
     const youtube = google.youtube({ version: 'v3', auth });
@@ -49,6 +50,18 @@ async function uploadToYouTube({ videoPath, title, description, tags }) {
   } catch (err) {
     console.error('uploadEngine error:', err.message);
     throw err;
+  }
+}
+
+  } catch (err) {
+    throw {
+      step: 'UPLOAD_ENGINE',
+      message: err.message || String(err),
+      details: {
+        code: err.code || null,
+        status: (err.response && err.response.status) || null,
+      },
+    };
   }
 }
 

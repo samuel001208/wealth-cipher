@@ -26,6 +26,7 @@ function getVideoDuration(filePath) {
 }
 
 async function buildVideo(videoPaths, voicePath) {
+  try {
   console.log('Building video...');
 
   const voiceDuration = await getVideoDuration(voicePath);
@@ -95,6 +96,18 @@ async function buildVideo(videoPaths, voicePath) {
       })
       .run();
   });
+}
+
+  } catch (err) {
+    throw {
+      step: 'VIDEO_ENGINE',
+      message: err.message || String(err),
+      details: {
+        code: err.code || null,
+        status: (err.response && err.response.status) || null,
+      },
+    };
+  }
 }
 
 module.exports = { buildVideo };

@@ -46,6 +46,7 @@ async function downloadVideo(url, filename) {
 }
 
 async function fetchVideosForSegments(segments) {
+  try {
   // Clear old videos first
   const files = fs.readdirSync(VIDEO_DIR);
   files.forEach(f => fs.unlinkSync(path.join(VIDEO_DIR, f)));
@@ -80,6 +81,18 @@ async function fetchVideosForSegments(segments) {
   }
 
   return videoPaths;
+}
+
+  } catch (err) {
+    throw {
+      step: 'PEXELS_ENGINE',
+      message: err.message || String(err),
+      details: {
+        code: err.code || null,
+        status: (err.response && err.response.status) || null,
+      },
+    };
+  }
 }
 
 module.exports = { fetchVideosForSegments };

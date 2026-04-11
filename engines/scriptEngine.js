@@ -46,6 +46,7 @@ async function generateWithRetry(model, prompt, retries = 3) {
 }
 
 async function generateScript() {
+  try {
   const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
   console.log('Selected topic:', topic);
 
@@ -107,6 +108,18 @@ SEGMENT_6: [sentence]`;
   console.log('Script saved to:', scriptPath);
 
   return { topic, segments, fullScript, title: title.trim(), description: description.trim(), tags, scriptPath };
+}
+
+  } catch (err) {
+    throw {
+      step: 'SCRIPT_ENGINE',
+      message: err.message || String(err),
+      details: {
+        code: err.code || null,
+        status: (err.response && err.response.status) || null,
+      },
+    };
+  }
 }
 
 module.exports = { generateScript };

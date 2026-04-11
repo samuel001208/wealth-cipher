@@ -27,6 +27,18 @@ function addLogEntry(entry) {
   writeLog(log.slice(0, 30)); // Keep last 30 entries
 }
 
+
+function normalizeError(err) {
+  if (err && typeof err === 'object' && err.step) {
+    return { step: err.step, message: err.message || 'Unknown error', details: err.details || null };
+  }
+  return {
+    step: 'UNKNOWN',
+    message: (err && err.message) ? err.message : String(err),
+    details: null,
+  };
+}
+
 async function runPipeline() {
   const logEntry = {
     date: new Date().toISOString(),
@@ -89,11 +101,17 @@ async function runPipeline() {
     console.log('============================\n');
 
   } catch (err) {
-    console.error('\nPipeline failed:', err.message);
+    const normalized = normalizeError(err);
+    console.error('\nPipeline failed at step:', normalized.step);
+    console.error('Error:', normalized.message);
     logEntry.status = 'failed';
-    logEntry.error = err.message;
+    logEntry.error = normalized.message;
     addLogEntry(logEntry);
-    await sendFailure({ engine: 'pipeline', error: err.message });
+    await sendFailure({
+      step: normalized.step,
+      message: normalized.message,
+      details: normalized.details,
+    });
     process.exit(1);
   }
 }
