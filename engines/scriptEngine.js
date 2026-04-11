@@ -1,114 +1,107 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const fs = require('fs');
-const path = require('path');
+const axios = require('axios');
 require('dotenv').config();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 const TOPICS = [
   'The dark psychology of power that schools never teach',
-  'Why most people will always stay broke - the mindset trap',
-  'The manipulation tactic every powerful person uses',
+  'Why most people will always stay broke - the real reason',
+  'The manipulation tactic every powerful person uses daily',
   'How to make people respect you without saying a word',
   'The silent rule of wealth the rich never talk about',
-  'Why your circle is keeping you poor and powerless',
+  'Why your circle is keeping you poor and how to fix it',
   'The one mindset shift that separates winners from losers',
   'How the elite stay in control without you knowing',
   'The dark truth about success nobody wants to admit',
-  'Why being nice is the fastest way to lose power',
-  'The law of power most people break every day',
+  'Why being nice is the fastest way to lose in life',
+  'The law of power most people break every single day',
   'How to read people instantly using dark psychology',
   'Why emotional people never build real wealth',
   'The strategy billionaires use to stay untouchable',
-  'How to detach from outcomes and dominate life',
+  'How to turn silence into your most powerful weapon',
+  'The brutal truth about why most people never win',
+  'Why the system is designed to keep you dependent',
+  'How to build leverage so nobody can control you',
+  'The wealth secret hidden in plain sight every day',
+  'Why discipline beats talent every single time',
 ];
 
-async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function generateWithRetry(model, prompt, retries = 3) {
+async function generateWithRetry(fn, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      const result = await model.generateContent(prompt);
-      return result.response.text();
+      return await fn();
     } catch (err) {
-      const isQuota = err.message && (err.message.includes('429') || err.message.includes('quota') || err.message.includes('RESOURCE_EXHAUSTED'));
-      if (isQuota && i < retries - 1) {
-        const delay = 60000 * (i + 1); // 1min, 2min, 3min
-        console.log(`Rate limited. Waiting ${delay/1000}s before retry ${i+2}/${retries}...`);
-        await sleep(delay);
-        continue;
-      }
-      throw err;
+      if (i === retries - 1) throw err;
+      console.log(`Retry ${i + 1}/${retries}...`);
+      await new Promise(r => setTimeout(r, 2000 * (i + 1)));
     }
   }
 }
 
 async function generateScript() {
   try {
-  const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
-  console.log('Selected topic:', topic);
+    const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+    console.log('Selected topic:', topic);
+    console.log('Generating script segments...');
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const prompt = `You are writing a short-form video script for a YouTube Shorts channel called Wealth Cipher.
 
-  const scriptPrompt = `Write a powerful, engaging YouTube Shorts script about: "${topic}"
+Topic: "${topic}"
 
-Rules:
-- Total duration: 30-35 seconds when spoken
-- Split into exactly 6-8 short punchy segments (1 sentence each)
-- Each segment syncs with a visual/video clip
-- Dark, psychological, wealth/power niche tone
-- Hook the viewer in the first 3 words
-- No hashtags, no emojis in script
-- Format EXACTLY like this (no extra text):
-SEGMENT_1: [sentence]
-SEGMENT_2: [sentence]
-SEGMENT_3: [sentence]
-SEGMENT_4: [sentence]
-SEGMENT_5: [sentence]
-SEGMENT_6: [sentence]`;
+Write a powerful, punchy script with exactly 5 short segments.
+Each segment should be 1-2 sentences max.
+Make it sound bold, confident and intriguing — like something that stops someone from scrolling.
+No emojis. No hashtags. No intro like "Hey guys". Just the raw script.
 
-  const titlePrompt = `Generate a short, viral YouTube Shorts title (max 60 chars) for this topic: "${topic}". Reply with ONLY the title, nothing else.`;
+Format your response EXACTLY like this:
+SEGMENT 1: [text]
+SEGMENT 2: [text]
+SEGMENT 3: [text]
+SEGMENT 4: [text]
+SEGMENT 5: [text]`;
 
-  const descPrompt = `Write a 2-sentence YouTube Shorts description for: "${topic}". Include a call to action. Reply with ONLY the description.`;
+    const response = await generateWithRetry(() =>
+      axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: 'meta-llama/llama-3.3-70b-instruct:free',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 400,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://github.com/samuel001208/wealth-cipher',
+            'X-Title': 'Wealth Cipher Automation',
+          },
+        }
+      )
+    );
 
-  const tagsPrompt = `List 8 YouTube tags (comma separated, no #) for a Shorts about: "${topic}". Reply with ONLY the tags.`;
+    const raw = response.data.choices[0].message.content.trim();
 
-  console.log('Generating script segments...');
-  const scriptRaw = await generateWithRetry(model, scriptPrompt);
+    // Parse segments
+    const segments = [];
+    const lines = raw.split('\n');
+    for (const line of lines) {
+      const match = line.match(/^SEGMENT\s*\d+:\s*(.+)$/i);
+      if (match) segments.push(match[1].trim());
+    }
 
-  const segments = [];
-  const lines = scriptRaw.split('\n');
-  for (const line of lines) {
-    const match = line.match(/SEGMENT_\d+:\s*(.+)/);
-    if (match) segments.push(match[1].trim());
-  }
+    if (segments.length < 3) {
+      throw new Error(`Not enough segments parsed. Got: ${segments.length}. Raw: ${raw.slice(0, 200)}`);
+    }
 
-  if (segments.length < 4) {
-    throw new Error(`Not enough segments generated. Got: ${segments.length}. Raw: ${scriptRaw}`);
-  }
+    const fullScript = segments.join(' ');
+    const title = `${topic} #shorts #wealth #mindset`;
+    const description = `${topic}\n\nWelcome to Wealth Cipher — daily insights on money, power and mindset.\n\n#WealthCipher #Shorts #Mindset #Money #Success`;
+    const tags = ['wealth', 'money', 'mindset', 'success', 'shorts', 'motivation', 'power', 'finance'];
 
-  console.log('Generating title, description, tags...');
-  const [title, description, tagsRaw] = await Promise.all([
-    generateWithRetry(model, titlePrompt),
-    generateWithRetry(model, descPrompt),
-    generateWithRetry(model, tagsPrompt),
-  ]);
+    console.log('Script generated successfully.');
+    console.log('Full script:', fullScript.slice(0, 100) + '...');
 
-  const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
-  const fullScript = segments.join(' ');
-
-  const scriptDir = path.join(__dirname, '..', 'scripts');
-  if (!fs.existsSync(scriptDir)) fs.mkdirSync(scriptDir, { recursive: true });
-
-  const timestamp = Date.now();
-  const scriptPath = path.join(scriptDir, `script_${timestamp}.txt`);
-  fs.writeFileSync(scriptPath, fullScript);
-  console.log('Script saved to:', scriptPath);
-
-  return { topic, segments, fullScript, title: title.trim(), description: description.trim(), tags, scriptPath };
-
+    return { topic, segments, fullScript, title, description, tags };
   } catch (err) {
     throw {
       step: 'SCRIPT_ENGINE',
