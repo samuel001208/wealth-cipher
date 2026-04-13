@@ -33,6 +33,7 @@ async function buildVideo(videoPaths, voicePath) {
   const voiceDuration = await getVideoDuration(voicePath);
   console.log('Voice duration:', voiceDuration, 'seconds');
 
+  fs.mkdirSync(PROCESSED_DIR, { recursive: true });
   const baseVideoPath = path.join(PROCESSED_DIR, 'base_no_subs.mp4');
   const musicPath = getRandomMusic();
 

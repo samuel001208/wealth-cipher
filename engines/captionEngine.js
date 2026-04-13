@@ -46,7 +46,8 @@ async function addCaptions(segments, inputVideoPath) {
     const duration = await getVideoDuration(inputVideoPath);
     const srtContent = buildSRT(segments, duration);
 
-    const srtPath = path.join(PROCESSED_DIR, 'captions.srt');
+    fs.mkdirSync(PROCESSED_DIR, { recursive: true });
+  const srtPath = path.join(PROCESSED_DIR, 'captions.srt');
     fs.writeFileSync(srtPath, srtContent);
     console.log('SRT file saved:', srtPath);
 
