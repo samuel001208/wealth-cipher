@@ -59,7 +59,7 @@ async function buildVideo(videoPaths, voicePath) {
 
     // Scale + crop each clip to 1080x1920 vertical
     for (let i = 0; i < n; i++) {
-      filterComplex += `[${i}:v]scale=1920:1080,crop=1080:1920:420:0,setsar=1[v${i}];`;
+      filterComplex += `[${i}:v]scale=1920:1080,crop=1080:1920:420:0,fps=30,setsar=1[v${i}];`;
     }
 
     // Concatenate all video clips
