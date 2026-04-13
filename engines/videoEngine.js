@@ -66,7 +66,7 @@ async function buildVideo(videoPaths, voicePath) {
     filterComplex += videoPaths.map((_, i) => `[v${i}]`).join('') + `concat=n=${n}:v=1:a=0[concatv];`;
 
     // Apply dark vignette + contrast boost
-    filterComplex += `[concatv]vignette=PI/4,eq=contrast=1.3:brightness=-0.05[finalv];`;
+    filterComplex += `[concatv]eq=contrast=1.3:brightness=-0.05[finalv];`;
 
     if (musicPath) {
       // Mix voice (full volume) + music (15% volume)
