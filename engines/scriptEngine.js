@@ -1,54 +1,62 @@
-const axios = require('axios');
-require('dotenv').config();
+const Groq = require('groq-sdk');
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const TOPICS = [
-  'The dark psychology of power that schools never teach',
-  'Why most people will always stay broke',
-  'The manipulation tactic every powerful person uses',
-  'How to make people respect you without saying a word',
-  'The silent rule of wealth the rich never talk about',
-  'Why your circle is keeping you poor',
-  'The one mindset shift separating winners from losers',
-  'How the elite stay in control without you knowing',
-  'The dark truth about success nobody wants to admit',
-  'Why being nice is the fastest way to lose in life'
-];
+const POWER_WORDS = ['power','discipline','silence','wealth','ancient','mind','strength','wisdom','control','rich','money','success','focus','stoic','philosopher','empire','legacy','patience','clarity','purpose'];
 
 async function generateScript() {
-  const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
-  const prompt = `You are a YouTube Shorts script writer. Write a script for a 60-second video about: ${topic}
+  const topicExamples = [
+    'The Ancient Philosophy of Discipline',
+    'The Simple Taste of Power',
+    'What Stoics Knew About Silence',
+    'The Weight of a Calm Mind',
+    'Why the Powerful Never Explain Themselves',
+    'The Philosophy of Earning Without Begging',
+    'What Ancient Empires Understood About Wealth',
+    'The Quiet Language of True Power'
+  ];
+  const randomExample = topicExamples[Math.floor(Math.random() * topicExamples.length)];
 
-Return ONLY a valid JSON object with these exact fields:
+  const prompt = `You are a philosophical narrator for a dark, cinematic YouTube Shorts channel called Wealth Cipher. Your style is poetic, calm, and ancient — like a stoic philosopher speaking about wealth and power.
+
+Generate a 45-second YouTube Short script on a philosophical wealth topic. The title must be poetic and unique, like: "${randomExample}".
+
+Rules:
+- Topic must be rooted in wealth, power, or discipline — told philosophically
+- Write in a calm, deep, poetic voice — not like a hustle influencer
+- 5 segments, each 1-2 sentences max
+- The LAST segment must be a commanding subscribe call-to-action, like: "Don't watch and scroll. If wealth and power speak to you — join Wealth Cipher. You know what to do. Subscribe."
+- Each segment needs a short Pexels video search keyword (3-5 words max, something visually ancient/dark/cinematic)
+
+Respond ONLY with valid JSON in this exact format:
 {
-  "segments": ["segment1 text", "segment2 text", "segment3 text", "segment4 text", "segment5 text"],
-  "fullScript": "the full script as one paragraph",
-  "title": "YouTube video title under 100 chars",
-  "description": "YouTube description under 500 chars",
-  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
-}
-Do not include any text outside the JSON object.`;
-  try {
-    const response = await axios.post(
-      'https://api.groq.com/openai/v1/chat/completions',
-      { model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], temperature: 0.8, max_tokens: 1000 },
-      { headers: { 'Authorization': 'Bearer ' + GROQ_API_KEY, 'Content-Type': 'application/json' }, timeout: 60000 }
-    );
-    const raw = response.data.choices[0].message.content.trim();
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON found in Groq response');
-    const parsed = JSON.parse(jsonMatch[0]);
-    return {
-      segments: parsed.segments,
-      fullScript: parsed.fullScript,
-      title: parsed.title,
-      description: parsed.description,
-      tags: parsed.tags
-    };
-  } catch (err) {
-    throw { step: 'SCRIPT_ENGINE', message: err.message || String(err), details: { code: err.code || null, status: (err.response && err.response.status) || null } };
-  }
+  "title": "string",
+  "description": "string (one powerful quote from the script, then: #WealthCipher #AncientWisdom #Philosophy #DarkPhilosophy #Wealth #Stoic)",
+  "tags": ["wealth", "philosophy", "ancient wisdom", "dark philosophy", "stoic", "power", "discipline", "wealth cipher"],
+  "segments": [
+    { "text": "narration text", "keyword": "pexels search keyword" },
+    { "text": "narration text", "keyword": "pexels search keyword" },
+    { "text": "narration text", "keyword": "pexels search keyword" },
+    { "text": "narration text", "keyword": "pexels search keyword" },
+    { "text": "Don't watch and scroll. If wealth and power speak to you — join Wealth Cipher. You know what to do. Subscribe.", "keyword": "ancient greek statue dark" }
+  ]
+}`;
+
+  const response = await client.chat.completions.create({
+    model: 'llama3-70b-8192',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.9,
+    max_tokens: 1000
+  });
+
+  const raw = response.choices[0].message.content.trim();
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('No JSON found in Groq response');
+
+  const script = JSON.parse(jsonMatch[0]);
+  script.powerWords = POWER_WORDS;
+  console.log('Script generated:', script.title);
+  return script;
 }
 
 module.exports = { generateScript };

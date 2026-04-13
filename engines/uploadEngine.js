@@ -28,7 +28,7 @@ async function uploadToYouTube({ videoPath, title, description, tags }) {
         snippet: {
           title: title || 'Wealth Cipher | Dark Psychology',
           description: description || 'Dark psychology of wealth and power.',
-          tags: Array.isArray(tags) ? tags : (tags ? tags.split(',').map(t => t.trim()) : ['dark psychology', 'wealth', 'power']),
+          tags: Array.isArray(tags) ? tags : (tags ? tags.split(',').map(t => t.trim()) : ['wealth', 'philosophy', 'ancient wisdom', 'dark philosophy', 'stoic', 'power', 'discipline', 'wealth cipher']),
           categoryId: '22',
           defaultLanguage: 'en',
         },

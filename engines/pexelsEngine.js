@@ -1,98 +1,67 @@
-require('dotenv').config();
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
-const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
-const VIDEO_DIR = path.join(__dirname, '../storage/videos');
-
-// Fallback keywords if a segment search returns nothing
-const FALLBACK_KEYWORDS = [
-  'dark luxury',
-  'city night skyline',
-  'wealthy lifestyle',
-  'powerful man thinking',
-  'dark cinematic',
+const ANCIENT_SUFFIXES = [
+  'ancient greek dark cinematic',
+  'ancient rome dark statue',
+  'dark ancient stone cinematic',
+  'ancient empire dark moody',
+  'greek philosophy dark aesthetic'
 ];
 
-async function searchPexelsVideo(keyword) {
-  try {
-    const response = await axios.get('https://api.pexels.com/videos/search', {
-      headers: { Authorization: PEXELS_API_KEY },
-      params: { query: keyword, per_page: 5, orientation: 'portrait' },
-    });
-    const videos = response.data.videos;
-    if (!videos || videos.length === 0) return null;
-    // Pick a random video from results
-    const video = videos[Math.floor(Math.random() * videos.length)];
-    // Get the highest quality file
-    const file = video.video_files.sort((a, b) => b.width - a.width)[0];
-    return file.link;
-  } catch (err) {
-    console.error('Pexels search error for keyword:', keyword, err.message);
-    return null;
-  }
-}
-
-async function downloadVideo(url, filename) {
-  const filePath = path.join(VIDEO_DIR, filename);
-  const response = await axios({ url, method: 'GET', responseType: 'stream' });
-  return new Promise((resolve, reject) => {
-    const writer = fs.createWriteStream(filePath);
-    response.data.pipe(writer);
-    writer.on('finish', () => resolve(filePath));
-    writer.on('error', reject);
-  });
-}
-
 async function fetchVideosForSegments(segments) {
-  try {
-  // Clear old videos first
-  fs.mkdirSync(VIDEO_DIR, { recursive: true });
-  const files = fs.readdirSync(VIDEO_DIR);
-  files.forEach(f => fs.unlinkSync(path.join(VIDEO_DIR, f)));
+  const videoDir = path.join(__dirname, '..', 'storage', 'videos');
+  fs.mkdirSync(videoDir, { recursive: true });
 
   const videoPaths = [];
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    // Extract keyword from segment (first 3-4 words)
-    const keyword = segment.split(' ').slice(0, 4).join(' ');
-    console.log(`Segment ${i + 1} keyword: "${keyword}"`);
+    const suffix = ANCIENT_SUFFIXES[i % ANCIENT_SUFFIXES.length];
+    const rawKeyword = segment.keyword || 'ancient dark cinematic';
+    const searchQuery = `${rawKeyword} ${suffix}`;
 
-    let videoUrl = await searchPexelsVideo(keyword);
+    console.log(`Fetching video for segment ${i + 1}: "${searchQuery}"`);
 
-    // If no result, try fallback keyword
-    if (!videoUrl) {
-      console.log(`No result for "${keyword}", trying fallback...`);
-      const fallback = FALLBACK_KEYWORDS[i % FALLBACK_KEYWORDS.length];
-      videoUrl = await searchPexelsVideo(fallback);
+    try {
+      const response = await axios.get('https://api.pexels.com/videos/search', {
+        headers: { Authorization: process.env.PEXELS_API_KEY },
+        params: { query: searchQuery, per_page: 5, orientation: 'portrait' }
+      });
+
+      let videos = response.data.videos;
+      if (!videos || videos.length === 0) {
+        // Fallback to just the ancient suffix
+        const fallback = await axios.get('https://api.pexels.com/videos/search', {
+          headers: { Authorization: process.env.PEXELS_API_KEY },
+          params: { query: 'ancient dark cinematic statue', per_page: 5, orientation: 'portrait' }
+        });
+        videos = fallback.data.videos;
+      }
+
+      const video = videos[Math.floor(Math.random() * videos.length)];
+      const videoFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
+
+      const videoPath = path.join(videoDir, `video${i}.mp4`);
+      const writer = fs.createWriteStream(videoPath);
+      const stream = await axios({ url: videoFile.link, method: 'GET', responseType: 'stream' });
+      stream.data.pipe(writer);
+
+      await new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+      });
+
+      console.log(`video${i}.mp4 saved`);
+      videoPaths.push(videoPath);
+    } catch (err) {
+      console.error(`Error fetching video ${i}:`, err.message);
+      throw err;
     }
-
-    if (!videoUrl) {
-      console.error(`Could not find video for segment ${i + 1}, skipping.`);
-      continue;
-    }
-
-    const filename = `video${i}.mp4`;
-    console.log(`Downloading video${i}.mp4...`);
-    const filePath = await downloadVideo(videoUrl, filename);
-    videoPaths.push(filePath);
-    console.log(`Saved: ${filePath}`);
   }
 
   return videoPaths;
-
-  } catch (err) {
-    throw {
-      step: 'PEXELS_ENGINE',
-      message: err.message || String(err),
-      details: {
-        code: err.code || null,
-        status: (err.response && err.response.status) || null,
-      },
-    };
-  }
 }
 
 module.exports = { fetchVideosForSegments };

@@ -1,20 +1,20 @@
-require('dotenv').config();
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-ffmpeg.setFfmpegPath(ffmpegPath);
+const POWER_WORDS = ['power','discipline','silence','wealth','ancient','mind','strength','wisdom','control','rich','money','success','focus','stoic','philosopher','empire','legacy','patience','clarity','purpose','king','throne','fire','gold'];
 
-const PROCESSED_DIR = path.join(__dirname, '../storage/processed');
-
-function buildSRT(segments, totalDuration) {
-  const timePerSegment = totalDuration / segments.length;
+function generateSRT(segments) {
   let srt = '';
+  let index = 1;
+  let currentTime = 0;
+  const avgSecondsPerSegment = 8;
 
-  segments.forEach((segment, i) => {
-    const start = i * timePerSegment;
-    const end = (i + 1) * timePerSegment;
+  for (const seg of segments) {
+    const words = seg.text.split(' ');
+    const segDuration = Math.max(4, words.length * 0.45);
+    const start = currentTime;
+    const end = currentTime + segDuration;
 
     const fmt = (s) => {
       const h = Math.floor(s / 3600).toString().padStart(2, '0');
@@ -24,56 +24,80 @@ function buildSRT(segments, totalDuration) {
       return `${h}:${m}:${sec},${ms}`;
     };
 
-    srt += `${i + 1}\n${fmt(start)} --> ${fmt(end)}\n${segment}\n\n`;
-  });
+    srt += `${index}\n${fmt(start)} --> ${fmt(end)}\n${seg.text}\n\n`;
+    currentTime = end + 0.3;
+    index++;
+  }
 
   return srt;
 }
 
-function getVideoDuration(filePath) {
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(filePath, (err, metadata) => {
-      if (err) return reject(err);
-      resolve(metadata.format.duration);
-    });
-  });
-}
+async function addCaptions(videoPath, segments, outputPath) {
+  const processedDir = path.join(__dirname, '..', 'storage', 'processed');
+  fs.mkdirSync(processedDir, { recursive: true });
 
-async function addCaptions(segments, inputVideoPath) {
+  const srtPath = path.join(processedDir, 'captions.srt');
+  const assSrt = path.join(processedDir, 'captions.ass');
+
+  // Generate SRT
+  const srtContent = generateSRT(segments);
+  fs.writeFileSync(srtPath, srtContent);
+  console.log('SRT file saved:', srtPath);
+
+  // Convert SRT to ASS for full style control
   try {
-    console.log('Adding captions...');
+    execSync(`ffmpeg -y -i "${srtPath}" "${assSrt}"`, { stdio: 'pipe' });
+  } catch(e) {}
 
-    const duration = await getVideoDuration(inputVideoPath);
-    const srtContent = buildSRT(segments, duration);
+  // Build Python script to modify ASS styles: milky white text, gold power words, small font, lower third
+  const pythonScript = `
+import re
 
-    fs.mkdirSync(PROCESSED_DIR, { recursive: true });
-  const srtPath = path.join(PROCESSED_DIR, 'captions.srt');
-    fs.writeFileSync(srtPath, srtContent);
-    console.log('SRT file saved:', srtPath);
+POWER_WORDS = ${JSON.stringify(POWER_WORDS)}
 
-    const outputPath = path.join(PROCESSED_DIR, 'output.mp4');
+with open('${assSrt}', 'r') as f:
+    content = f.read()
 
-    return new Promise((resolve, reject) => {
-      ffmpeg(inputVideoPath)
-        .outputOptions([
-          `-vf subtitles=${srtPath.replace(/\\/g, '/')}:force_style='FontName=Arial,FontSize=18,PrimaryColour=&HFFFFFF,Bold=1,Alignment=2,MarginV=80,Outline=1,Shadow=0'`,
-          '-c:a copy',
-        ])
-        .output(outputPath)
-        .on('end', () => {
-          console.log('Final video with captions:', outputPath);
-          resolve(outputPath);
-        })
-        .on('error', (err) => {
-          console.error('captionEngine error:', err.message);
-          reject(err);
-        })
-        .run();
-    });
-  } catch (err) {
-    console.error('captionEngine error:', err.message);
-    throw err;
-  }
+# Update style: small font (32), milky white color, lower third position
+content = re.sub(r'Fontsize:[0-9]+', 'Fontsize:32', content)
+content = re.sub(r'PrimaryColour:&H[0-9A-Fa-f]+', 'PrimaryColour:&H00E8E0D5', content)  # milky white
+content = re.sub(r'Alignment:[0-9]+', 'Alignment:2', content)  # bottom center
+content = re.sub(r'MarginV:[0-9]+', 'MarginV:80', content)  # lower third spacing
+content = content.replace('Bold:-1', 'Bold:0')
+content = content.replace('Bold:1', 'Bold:0')
+
+# Highlight power words in gold
+def highlight_line(line):
+    for word in POWER_WORDS:
+        pattern = re.compile(r'\\b(' + re.escape(word) + r')\\b', re.IGNORECASE)
+        line = pattern.sub(r'{\\c&H0045D4FF&}\\1{\\c&H00E8E0D5&}', line)
+    return line
+
+lines = content.split('\\n')
+result = []
+for line in lines:
+    if not line.startswith('[') and not line.startswith('Style:') and not line.startswith('Format:') and ':' not in line[:6]:
+        line = highlight_line(line)
+    result.append(line)
+
+with open('${assSrt}', 'w') as f:
+    f.write('\\n'.join(result))
+print('ASS captions styled successfully')
+`;
+
+  const pyPath = path.join(processedDir, 'style_captions.py');
+  fs.writeFileSync(pyPath, pythonScript);
+  execSync(`python3 "${pyPath}"`, { stdio: 'inherit' });
+
+  // Burn captions into video
+  const captionCmd = `ffmpeg -y -i "${videoPath}" -vf "ass='${assSrt.replace(/'/g, "'\\\''")}'" -c:a copy "${outputPath}"`;
+  execSync(captionCmd, { stdio: 'inherit' });
+  console.log('Captions burned into video:', outputPath);
+
+  // Cleanup
+  try { fs.unlinkSync(pyPath); } catch(e) {}
+
+  return outputPath;
 }
 
 module.exports = { addCaptions };
