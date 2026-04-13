@@ -18,14 +18,34 @@ const TOPICS = [
 
 async function generateScript() {
   const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
-  const prompt = `Write a 60-second YouTube Shorts script about: ${topic}.\n\nFormat:\nSEGMENT 1: [hook]\nSEGMENT 2: [text]\nSEGMENT 3: [text]\nSEGMENT 4: [text]\nSEGMENT 5: [call to action]\n\nBe bold and direct.`;
+  const prompt = `You are a YouTube Shorts script writer. Write a script for a 60-second video about: ${topic}
+
+Return ONLY a valid JSON object with these exact fields:
+{
+  "segments": ["segment1 text", "segment2 text", "segment3 text", "segment4 text", "segment5 text"],
+  "fullScript": "the full script as one paragraph",
+  "title": "YouTube video title under 100 chars",
+  "description": "YouTube description under 500 chars",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+}
+Do not include any text outside the JSON object.`;
   try {
     const response = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
-      { model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'You write viral YouTube Shorts scripts about wealth and mindset.' }, { role: 'user', content: prompt }], temperature: 0.8, max_tokens: 800 },
+      { model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], temperature: 0.8, max_tokens: 1000 },
       { headers: { 'Authorization': 'Bearer ' + GROQ_API_KEY, 'Content-Type': 'application/json' }, timeout: 60000 }
     );
-    return { script: response.data.choices[0].message.content.trim(), topic };
+    const raw = response.data.choices[0].message.content.trim();
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found in Groq response');
+    const parsed = JSON.parse(jsonMatch[0]);
+    return {
+      segments: parsed.segments,
+      fullScript: parsed.fullScript,
+      title: parsed.title,
+      description: parsed.description,
+      tags: parsed.tags
+    };
   } catch (err) {
     throw { step: 'SCRIPT_ENGINE', message: err.message || String(err), details: { code: err.code || null, status: (err.response && err.response.status) || null } };
   }
