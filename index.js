@@ -77,7 +77,7 @@ async function runPipeline() {
 
     // STEP 5: Add captions
     console.log('\nSTEP 5: Adding captions...');
-    const finalVideoPath = await addCaptions(segments, baseVideoPath);
+    const finalOutputPath = path.join(__dirname, "storage", "videos", "final.mp4"); const finalVideoPath = await addCaptions(baseVideoPath, segments, finalOutputPath);
     console.log('Final video ready:', finalVideoPath);
 
     // STEP 6: Upload to YouTube
