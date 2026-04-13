@@ -43,7 +43,7 @@ Respond ONLY with valid JSON in this exact format:
 }`;
 
   const response = await client.chat.completions.create({
-    model: 'llama3-70b-8192',
+    model: 'llama-3.3-70b-versatile',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.9,
     max_tokens: 1000
