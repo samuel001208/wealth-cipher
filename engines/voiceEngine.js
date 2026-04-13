@@ -1,65 +1,39 @@
-require('dotenv').config();
-const axios = require('axios');
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const VOICE_ID = process.env.ELEVENLABS_VOICE_ID;
-const AUDIO_DIR = path.join(__dirname, '../storage/audio');
+async function generateVoice(text) {
+  const audioDir = path.join(__dirname, '..', 'storage', 'audio');
+  fs.mkdirSync(audioDir, { recursive: true });
+  const voicePath = path.join(audioDir, 'voice.mp3');
 
-async function generateVoice(scriptText) {
-  try {
-  try {
-    console.log('Generating voiceover with ElevenLabs...');
+  console.log('Generating voiceover with gTTS (free)...');
 
-    const response = await axios({
-      method: 'POST',
-      url: `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY,
-        'Content-Type': 'application/json',
-        Accept: 'audio/mpeg',
-      },
-      data: {
-        text: scriptText,
-        model_id: 'eleven_turbo_v2_5',
-        voice_settings: {
-          stability: 0.75,
-          similarity_boost: 0.85,
-          style: 0.4,
-          use_speaker_boost: true,
-        },
-      },
-      responseType: 'stream',
-    });
+  // Write text to a temp file to avoid shell escaping issues
+  const tmpText = path.join(audioDir, 'script.txt');
+  fs.writeFileSync(tmpText, text, 'utf8');
 
-    fs.mkdirSync(AUDIO_DIR, { recursive: true });
-    const voicePath = path.join(AUDIO_DIR, 'voice.mp3');
-    const writer = fs.createWriteStream(voicePath);
-    response.data.pipe(writer);
+  // Use Python gTTS to generate the voice
+  const pythonScript = `
+import sys
+from gtts import gTTS
+text = open('${tmpText}', 'r').read()
+tts = gTTS(text=text, lang='en', slow=False)
+tts.save('${voicePath}')
+print('Voice saved to: ${voicePath}')
+`;
 
-    return new Promise((resolve, reject) => {
-      writer.on('finish', () => {
-        console.log('Voiceover saved to:', voicePath);
-        resolve(voicePath);
-      });
-      writer.on('error', reject);
-    });
-  } catch (err) {
-    console.error('voiceEngine error:', err.message);
-    throw err;
-  }
+  const tmpPy = path.join(audioDir, 'tts.py');
+  fs.writeFileSync(tmpPy, pythonScript, 'utf8');
 
-  } catch (err) {
-    throw {
-      step: 'VOICE_ENGINE',
-      message: err.message || String(err),
-      details: {
-        code: err.code || null,
-        status: (err.response && err.response.status) || null,
-      },
-    };
-  }
+  execSync(`pip install gtts -q && python3 "${tmpPy}"`, { stdio: 'inherit' });
+
+  // Cleanup temp files
+  try { fs.unlinkSync(tmpText); } catch(e) {}
+  try { fs.unlinkSync(tmpPy); } catch(e) {}
+
+  console.log('Voiceover saved to:', voicePath);
+  return voicePath;
 }
 
 module.exports = { generateVoice };
