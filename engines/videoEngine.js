@@ -14,7 +14,7 @@ async function buildVideo(videoPaths, voicePath, musicPath, outputPath) {
   console.log('Concat list written:', concatList);
 
   // Step 2: Concat video clips (no audio), scale to 1080x1920
-  const cmd1 = `ffmpeg -y -f concat -safe 0 -i "${concatList}" -an -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -preset ultrafast "${silentVideo}"`;
+  const cmd1 = `ffmpeg -y -f concat -safe 0 -i "${concatList}" -an -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -preset ultrafast -t 58 "${silentVideo}"`;
   console.log('Running step 2: concat videos');
   execSync(cmd1, { stdio: 'inherit' });
   console.log('Silent video built');
