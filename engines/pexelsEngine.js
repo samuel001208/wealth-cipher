@@ -48,6 +48,7 @@ async function downloadVideo(url, filename) {
 async function fetchVideosForSegments(segments) {
   try {
   // Clear old videos first
+  fs.mkdirSync(VIDEO_DIR, { recursive: true });
   const files = fs.readdirSync(VIDEO_DIR);
   files.forEach(f => fs.unlinkSync(path.join(VIDEO_DIR, f)));
 

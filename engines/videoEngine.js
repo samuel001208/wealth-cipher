@@ -10,6 +10,7 @@ const MUSIC_DIR = path.join(__dirname, '../storage/music');
 const PROCESSED_DIR = path.join(__dirname, '../storage/processed');
 
 function getRandomMusic() {
+  fs.mkdirSync(MUSIC_DIR, { recursive: true });
   const files = fs.readdirSync(MUSIC_DIR).filter(f => f.endsWith('.mp3'));
   if (files.length === 0) return null;
   const picked = files[Math.floor(Math.random() * files.length)];
