@@ -55,7 +55,7 @@ async function runPipeline() {
   try {
     // STEP 1: Generate script
     console.log('STEP 1: Generating script...');
-    const { segments, fullScript, title, description, tags } = await generateScript();
+    const script = await generateScript(); const { segments, title, description, tags } = script; const fullScript = segments.map(s => s.text).join(' ');
     logEntry.title = title;
     console.log('Script ready. Segments:', segments.length);
 
