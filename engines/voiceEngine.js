@@ -33,6 +33,7 @@ async function generateVoice(scriptText) {
       responseType: 'stream',
     });
 
+    fs.mkdirSync(AUDIO_DIR, { recursive: true });
     const voicePath = path.join(AUDIO_DIR, 'voice.mp3');
     const writer = fs.createWriteStream(voicePath);
     response.data.pipe(writer);
