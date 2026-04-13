@@ -72,7 +72,7 @@ async function runPipeline() {
 
     // STEP 4: Build video
     console.log('\nSTEP 4: Building video...');
-    const baseVideoPath = await buildVideo(videoPaths, voicePath);
+    const outputVideoPath = path.join(__dirname, 'storage', 'videos', 'output.mp4'); const baseVideoPath = await buildVideo(videoPaths, voicePath, null, outputVideoPath);
     console.log('Base video ready:', baseVideoPath);
 
     // STEP 5: Add captions

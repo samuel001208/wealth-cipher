@@ -4,7 +4,7 @@ const path = require('path');
 
 async function buildVideo(videoPaths, voicePath, musicPath, outputPath) {
   const storage = path.join(__dirname, '..', 'storage');
-  const concatList = path.join(storage, 'concat.txt');
+  fs.mkdirSync(storage, { recursive: true }); fs.mkdirSync(path.join(storage, 'videos'), { recursive: true }); const concatList = path.join(storage, 'concat.txt');
   const silentVideo = path.join(storage, 'silent.mp4');
   const tmpAudio = path.join(storage, 'mixed_audio.aac');
 
