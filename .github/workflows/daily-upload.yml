@@ -28,6 +28,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        
+        - name: Create storage directories
+          run: mkdir -p storage/videos storage/audio storage/final
 
       - name: Run YouTube automation
         env:
