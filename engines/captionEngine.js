@@ -11,6 +11,7 @@ function generateSRT(segments) {
   const avgSecondsPerSegment = 8;
 
   for (const seg of segments) {
+        if (!seg || !seg.text) continue;
     const words = seg.text.split(' ');
     const segDuration = Math.max(4, words.length * 0.45);
     const start = currentTime;
