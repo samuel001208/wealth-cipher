@@ -19,7 +19,7 @@ async function generateScript() {
 
   const prompt = `You are a philosophical narrator for a dark, cinematic YouTube Shorts channel called Wealth Cipher. Your style is poetic, calm, and ancient — like a stoic philosopher speaking about wealth and power.
 
-Generate a 45-second YouTube Short script on a philosophical wealth topic. The title must be poetic and unique, like: "${randomExample}".
+Generate a 30 to 38-second YouTube Short script on a philosophical wealth topic. The title must be poetic and unique, like: "${randomExample}".
 
 Rules:
 - Topic must be rooted in wealth, power, or discipline — told philosophically
