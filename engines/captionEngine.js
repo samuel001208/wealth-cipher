@@ -95,7 +95,7 @@ async function addCaptions(videoPath, segments, outputPath) {
     execSync('pip install fonttools -q || true', { stdio: 'inherit' });
     execSync('apt-get install -y fonts-open-sans 2>/dev/null || true', { stdio: 'inherit' });
     // Download Cinzel font
-    execSync('mkdir -p /usr/share/fonts/cinzel && wget -q -O /usr/share/fonts/cinzel/Cinzel-Bold.ttf "https://github.com/googlefonts/Cinzel/raw/main/fonts/ttf/Cinzel-Bold.ttf" && fc-cache -f', { stdio: 'inherit' });
+    execSync('apt-get install -y fonts-urw-base35 2>/dev/null || true; mkdir -p /usr/share/fonts/cinzel && wget --tries=3 -q -O /usr/share/fonts/cinzel/Cinzel-Bold.ttf "https://github.com/NDISCOVER/Cinzel/raw/main/fonts/ttf/Cinzel-Bold.ttf" && fc-cache -f || true', { stdio: 'inherit' });
     console.log('Cinzel font installed');
   }
 
