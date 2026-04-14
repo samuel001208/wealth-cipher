@@ -3,11 +3,21 @@ const fs = require('fs');
 const path = require('path');
 
 const ANCIENT_SUFFIXES = [
-  'ancient greek dark cinematic',
-  'ancient rome dark statue',
-  'dark ancient stone cinematic',
-  'ancient empire dark moody',
-  'greek philosophy dark aesthetic'
+  'Marcus Aurelius bust ancient sculpture',
+  'Socrates philosopher marble statue',
+  'Julius Caesar Roman sculpture dark',
+  'Aristotle ancient Greek bust cinematic',
+  'Stoic philosopher ancient marble',
+  'Napoleon Bonaparte sculpture dramatic',
+  'Plato ancient sculpture dark cinematic',
+  'Roman emperor bust stone dramatic',
+  'ancient Greek philosopher sculpture',
+  'Confucius statue dramatic lighting',
+  'Sun Tzu ancient warrior statue',
+  'Shakespeare bust dramatic dark',
+  'ancient dark cinematic statue power',
+  'Seneca Roman philosopher sculpture',
+  'Alexander the Great statue cinematic'
 ];
 
 async function fetchVideosForSegments(segments) {
