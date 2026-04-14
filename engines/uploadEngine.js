@@ -46,6 +46,18 @@ async function uploadToYouTube({ videoPath, title, description, tags }) {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     console.log('Uploaded successfully!');
     console.log('Video URL:', videoUrl);
+  // Upload SRT caption track to suppress YouTube auto-captions
+  try {
+    const srtPath = require("path").join(__dirname, "..", "storage", "processed", "captions.srt");
+    if (require("fs").existsSync(srtPath)) {
+      await youtube.captions.insert({
+        part: ["snippet"],
+        requestBody: { snippet: { videoId, language: "en", name: "English", isDraft: false } },
+        media: { mimeType: "text/plain", body: require("fs").createReadStream(srtPath) }
+      });
+      console.log("Caption track uploaded");
+    }
+  } catch(ce) { console.log("Caption upload skipped:", ce.message); }
     return { videoId, videoUrl };
   } catch (err) {
     console.error('uploadEngine error:', err.message);

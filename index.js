@@ -3,7 +3,7 @@ const { generateScript } = require('./engines/scriptEngine');
 const { fetchVideosForSegments } = require('./engines/pexelsEngine');
 const { generateVoice } = require('./engines/voiceEngine');
 const { buildVideo } = require('./engines/videoEngine');
-const { addCaptions } = require('./engines/captionEngine');
+const { addCaptions, generateSRT } = require('./engines/captionEngine');
 const { uploadToYouTube } = require('./engines/uploadEngine');
 const { sendSuccess, sendFailure } = require('./engines/alertEngine');
 const fs = require('fs');
@@ -52,6 +52,9 @@ async function runPipeline() {
     const finalVideoPath = await addCaptions(baseVideoPath, segments, finalOutputPath);
     console.log('Final video ready:', finalVideoPath);
 
+    const srtPath = path.join(__dirname, 'storage', 'processed', 'captions.srt');
+    await generateSRT(segments, srtPath);
+    console.log('SRT generated:', srtPath);
     console.log('STEP 6: Uploading to YouTube...');
     const { videoUrl } = await uploadToYouTube({ videoPath: finalVideoPath, title, description, tags });
     logEntry.status = 'uploaded';

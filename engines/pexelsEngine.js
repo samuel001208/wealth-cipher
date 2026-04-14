@@ -3,6 +3,18 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+// Cinematic fallback queries — dark, powerful, moody
+const CINEMATIC_FALLBACKS = [
+  'dark ancient temple cinematic',
+  'stormy sky lightning cinematic',
+  'warrior silhouette sunset',
+  'rome colosseum dark dramatic',
+  'burning fire dark background',
+  'dark forest fog cinematic',
+  'ocean waves dramatic storm',
+  'mountain peak clouds cinematic'
+];
+
 async function fetchVideosForSegments(segments) {
   const videoDir = path.join(__dirname, '..', 'storage', 'videos');
   fs.mkdirSync(videoDir, { recursive: true });
@@ -12,55 +24,45 @@ async function fetchVideosForSegments(segments) {
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
     const duration = segment.audioDuration || 6;
-    // Use the AI-generated keyword directly — no suffix mixing
-    const searchQuery = segment.keyword || 'ancient philosopher statue dark cinematic';
+    const keyword = segment.keyword || 'ancient dark cinematic';
+    // Append cinematic qualifier to every search
+    const searchQuery = keyword + ' cinematic dark';
 
-    console.log(`Fetching video for segment ${i + 1}: "${searchQuery}" (${duration.toFixed(2)}s)`);
+    console.log('Fetching video for segment ' + (i+1) + ': "' + searchQuery + '" (' + duration.toFixed(2) + 's)');
 
     let videoFile = null;
+    let attempts = [searchQuery, CINEMATIC_FALLBACKS[i % CINEMATIC_FALLBACKS.length], 'dark cinematic dramatic'];
 
-    try {
-      const response = await axios.get('https://api.pexels.com/videos/search', {
-        headers: { Authorization: process.env.PEXELS_API_KEY },
-        params: { query: searchQuery, per_page: 8, orientation: 'portrait' }
-      });
-      let videos = response.data.videos;
-
-      // Fallback if nothing found
-      if (!videos || videos.length === 0) {
-        const fallback = await axios.get('https://api.pexels.com/videos/search', {
+    for (const query of attempts) {
+      try {
+        const response = await axios.get('https://api.pexels.com/videos/search', {
           headers: { Authorization: process.env.PEXELS_API_KEY },
-          params: { query: 'ancient dark statue cinematic', per_page: 8, orientation: 'portrait' }
+          params: { query, per_page: 10, orientation: 'portrait' }
         });
-        videos = fallback.data.videos;
+        const videos = response.data.videos;
+        if (videos && videos.length > 0) {
+          // Pick a random one from results for variety
+          const pick = videos[Math.floor(Math.random() * videos.length)];
+          videoFile = pick.video_files.find(f => f.quality === 'hd') || pick.video_files[0];
+          break;
+        }
+      } catch(err) {
+        console.error('Pexels fetch error (query: ' + query + '):', err.message);
       }
-
-      const video = videos[Math.floor(Math.random() * videos.length)];
-      videoFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
-    } catch (err) {
-      console.error(`Pexels fetch error for segment ${i}:`, err.message);
-      throw err;
     }
 
-    // Download raw clip
-    const rawPath = path.join(videoDir, `raw_${i}.mp4`);
-    const writer = fs.createWriteStream(rawPath);
-    const stream = await axios({ url: videoFile.link, method: 'GET', responseType: 'stream' });
-    stream.data.pipe(writer);
-    await new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
+    if (!videoFile) throw new Error('No video found for segment ' + (i+1));
 
-    // Trim clip to exact segment audio duration + scale to 1080x1920
-    const trimmedPath = path.join(videoDir, `video${i}.mp4`);
-    const trimCmd = `ffmpeg -y -i "${rawPath}" -t ${duration} -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=brightness=-0.08:saturation=0.7:contrast=1.15" -c:v libx264 -preset ultrafast -an "${trimmedPath}"`;
-    execSync(trimCmd, { stdio: 'inherit' });
+    // Download the clip
+    const clipPath = path.join(videoDir, 'clip_' + i + '.mp4');
+    execSync('wget -q --tries=3 -O "' + clipPath + '" "' + videoFile.link + '"');
 
-    try { fs.unlinkSync(rawPath); } catch(e) {}
+    // Trim clip to exact segment duration + small buffer
+    const trimmed = path.join(videoDir, 'trimmed_' + i + '.mp4');
+    execSync('ffmpeg -y -i "' + clipPath + '" -t ' + (duration + 0.3) + ' -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" -c:v libx264 -preset ultrafast -an "' + trimmed + '"');
 
-    console.log(`video${i}.mp4 saved (${duration.toFixed(2)}s)`);
-    videoPaths.push(trimmedPath);
+    videoPaths.push(trimmed);
+    console.log('Clip ' + (i+1) + ' ready: ' + trimmed);
   }
 
   return videoPaths;
