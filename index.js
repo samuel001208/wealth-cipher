@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 const LOG_FILE = path.join(__dirname, 'dashboard.json');
+function readLog() { if (!fs.existsSync(LOG_FILE)) return []; return JSON.parse(fs.readFileSync(LOG_FILE, 'utf8')); }
 function writeLog(e) { fs.writeFileSync(LOG_FILE, JSON.stringify(e, null, 2)); }
 function addLogEntry(entry) { const log = readLog(); log.unshift(entry); writeLog(log.slice(0, 30)); }
 function normalizeError(err) {
@@ -19,7 +20,7 @@ function normalizeError(err) {
 
 async function runPipeline() {
   const logEntry = { date: new Date().toISOString(), status: 'processing', title: '', videoUrl: '', error: '' };
-  console.log('WEALTH CIPHER AUTOMATION');
+  console.log('WEALTH CIPHER AUTOMATION STARTED');
   try {
     console.log('STEP 1: Generating script...');
     const script = await generateScript();
@@ -39,6 +40,8 @@ async function runPipeline() {
 
     console.log('STEP 4: Building video...');
     const storageDir = path.join(__dirname, 'storage');
+    const allFiles = fs.readdirSync(storageDir);
+    const musicFiles = allFiles.filter(f => f.endsWith('.mp3') && !f.startsWith('seg_') && f !== 'voice.mp3');
     const musicPath = musicFiles.length > 0 ? path.join(storageDir, musicFiles[Math.floor(Math.random() * musicFiles.length)]) : null;
     const outputVideoPath = path.join(storageDir, 'videos', 'output.mp4');
     const baseVideoPath = await buildVideo(videoPaths, voicePath, musicPath, outputVideoPath);
@@ -56,10 +59,12 @@ async function runPipeline() {
     addLogEntry(logEntry);
     await sendSuccess({ title, videoUrl });
     console.log('DONE! URL:', videoUrl);
+
   } catch (err) {
     const n = normalizeError(err);
     console.error('Pipeline failed:', n.step, n.message);
-    logEntry.status = 'failed'; logEntry.error = n.message;
+    logEntry.status = 'failed';
+    logEntry.error = n.message;
     addLogEntry(logEntry);
     await sendFailure({ step: n.step, message: n.message, details: n.details });
     process.exit(1);
