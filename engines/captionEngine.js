@@ -16,7 +16,7 @@ const GOLD_WORDS = new Set([
 function buildASS(segments) {
   const W = 1080, H = 1920;
   // Lower third: 160px from bottom for captions, 28px for watermark
-  const marginV = 160;
+  const marginV = 320;
   const watermarkMarginV = 28;
 
   let ass = '[Script Info]\n';
@@ -27,7 +27,7 @@ function buildASS(segments) {
   ass += '[V4+ Styles]\n';
   ass += 'Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n';
   // Main: white, Cinzel, size 28, bold, bottom-center (alignment 2), shadow+outline
-  ass += 'Style: Main,Cinzel,28,&H00FFFFFF,&H000000FF,&H00000000,&HAA000000,1,0,0,0,100,100,1,0,1,2,2,2,60,60,' + marginV + ',1\n';
+  ass += 'Style: Main,Cinzel,48,&H00FFFFFF,&H000000FF,&H00000000,&HAA000000,1,0,0,0,100,100,1,0,1,2,2,2,60,60,' + marginV + ',1\n';
   // Watermark: small, white, bottom-center
   ass += 'Style: Watermark,Cinzel,16,&H00FFFFFF,&H000000FF,&H00000000,&H88000000,0,0,0,0,100,100,0,0,1,1,1,2,60,60,' + watermarkMarginV + ',1\n';
   ass += '\n[Events]\n';
