@@ -21,7 +21,6 @@ async function buildVideo(videoPaths, voicePath, musicPath, outputPath) {
   const lines = videoPaths.map(v => "file '" + v + "'").join('\n');
   fs.writeFileSync(concatList, lines);
 
-  const filters = 'vignette=PI/2.5:mode=backward,colorchannelmixer=rr=0.9:gg=0.85:bb=0.9';
   const concatCmd = 'ffmpeg -y -f concat -safe 0 -i "' + concatList + '" -t ' + voiceDuration + ' -vf "' + filters + '" -c:v libx264 -preset ultrafast -an "' + silentVideo + '"';
   execSync(concatCmd, { stdio: 'inherit' });
   console.log('Silent video built');
