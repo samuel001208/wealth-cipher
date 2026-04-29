@@ -1,101 +1,82 @@
-
 const Groq = require('groq-sdk');
-const fs = require('fs');
-require('dotenv').config();
+const fs = require('fs').promises;
+const path = require('path');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const vocabulary = require('../vocabulary.json');
 
-async function getQuote() {
-  const vocab = JSON.parse(fs.readFileSync('vocabulary.json', 'utf8'));
-  const used = JSON.parse(fs.readFileSync('storage/used.json', 'utf8'));
+function getRandomElement(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
 
-  const openers = vocab.openers;
-  const adjectives = vocab.adjectives;
-  const verbs = vocab.verbs;
-  const titleTemplates = vocab.titleTemplates;
+async function generatePhilosopherQuote() {
+  try {
+    // Get random vocabulary for intro construction
+    const opening = getRandomElement(vocabulary.openings);
+    const descriptor = getRandomElement(vocabulary.descriptors);
+    const verb = getRandomElement(vocabulary.verbs);
 
-  const response = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [{
-      role: 'user',
-      content: `You are a philosophy expert. Find a real, verified, well-known short quote from a famous philosopher. The quote must be historically documented and genuinely attributed to the philosopher. The quote must be no longer than 40 words. Do not invent quotes.
+    const prompt = `You are a philosophy expert. Find a real, authentic short quote from a famous philosopher.
 
-Return ONLY a JSON object in this exact format:
+REQUIREMENTS:
+- The quote must be REAL and authentic (not made up)
+- Quote must be 10-25 words long
+- Must be from a well-known philosopher (Socrates, Plato, Aristotle, Marcus Aurelius, Confucius, Seneca, Nietzsche, Epictetus, etc.)
+- Must be profound and thought-provoking
+- Must be suitable for a 10-20 second video
+
+Respond ONLY in this exact JSON format (no markdown, no extra text):
 {
-  "quote": "the exact quote here",
-  "philosopher": "First and Last Name",
-  "topic": "one word topic e.g. wisdom, courage, justice"
+  "quote": "the actual quote here",
+  "philosopher": "Philosopher Name",
+  "intro": "${opening} ${descriptor} it was when ${verb}"
 }
 
-Do not repeat these recently used philosophers: ${used.philosophers.slice(-5).join(', ')}
-Return only the JSON, nothing else.`
-    }],
-    temperature: 0.7,
-    max_tokens: 200
-  });
+Example response:
+{
+  "quote": "The only true wisdom is in knowing you know nothing",
+  "philosopher": "Socrates",
+  "intro": "${opening} ${descriptor} it was when Socrates ${verb}"
+}`;
 
-  const raw = response.choices[0].message.content.trim();
-  const data = JSON.parse(raw);
+    const response = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.8,
+      max_tokens: 200
+    });
 
-  // Pick best opener using Groq
-  const openerResponse = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [{
-      role: 'user',
-      content: `You are a video scriptwriter. Given this philosopher quote and a list of sentence opener templates, pick the SINGLE best opener template that fits the tone and subject of the quote, fill in the adjective and verb placeholders with the best word from the provided lists, and return the completed sentence.
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) throw new Error('Empty response from Groq');
 
-Quote: ${data.quote}
-Philosopher: ${data.philosopher}
+    // Parse JSON response
+    const quoteData = JSON.parse(content);
 
-Opener templates: ${JSON.stringify(openers)}
-Adjectives to use: ${JSON.stringify(adjectives)}
-Verbs to use: ${JSON.stringify(verbs)}
+    // Validate required fields
+    if (!quoteData.quote || !quoteData.philosopher) {
+      throw new Error('Invalid quote data structure');
+    }
 
-Return ONLY the completed opener sentence. Replace {philosopher} with the actual name. Replace {adjective} and {verb} with your chosen words. Return nothing else.`
-    }],
-    temperature: 0.8,
-    max_tokens: 150
-  });
+    // Build complete narration script
+    const fullNarration = `${quoteData.intro}, "${quoteData.quote}"`;
 
-  const opener = openerResponse.choices[0].message.content.trim();
+    console.log('\n✓ Generated quote:');
+    console.log(`  Philosopher: ${quoteData.philosopher}`);
+    console.log(`  Quote: ${quoteData.quote}`);
+    console.log(`  Full narration: ${fullNarration}`);
 
-  // Pick best title using Groq
-  const titleResponse = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [{
-      role: 'user',
-      content: `Pick the best YouTube Shorts title from these templates for this quote. Fill in all placeholders.
+    return {
+      quote: quoteData.quote,
+      philosopher: quoteData.philosopher,
+      intro: quoteData.intro,
+      fullNarration: fullNarration,
+      description: `${quoteData.philosopher} on wisdom and philosophy`
+    };
 
-Quote: ${data.quote}
-Philosopher: ${data.philosopher}
-Templates: ${JSON.stringify(titleTemplates)}
-Adjectives: ${JSON.stringify(adjectives)}
-
-Return ONLY the completed title. Nothing else.`
-    }],
-    temperature: 0.7,
-    max_tokens: 80
-  });
-
-  const title = titleResponse.choices[0].message.content.trim();
-
-  // Generate description
-  const description = `A timeless reflection on ${data.topic} by ${data.philosopher}. #philosophy #wisdom #${data.topic} #quotes #shorts`;
-
-  // Track used philosopher
-  used.philosophers.push(data.philosopher);
-  if (used.philosophers.length > 30) used.philosophers.shift();
-  fs.writeFileSync('storage/used.json', JSON.stringify(used, null, 2));
-
-  return {
-    quote: data.quote,
-    philosopher: data.philosopher,
-    topic: data.topic,
-    opener,
-    title,
-    description,
-    narration: ${"`"} ${opener}... ${data.quote} ${"`"}
-  };
+  } catch (error) {
+    console.error('Error generating quote:', error.message);
+    throw error;
+  }
 }
 
-module.exports = { getQuote };
+module.exports = { generatePhilosopherQuote };

@@ -1,73 +1,53 @@
-const { getQuote } = require('./engines/quoteEngine');
-const { generateVoice } = require('./engines/voiceEngine');
-const { buildVideo } = require('./engines/videoEngine');
-const { uploadVideo } = require('./engines/uploadEngine');
-const nodemailer = require('nodemailer');
-const fs = require('fs');
 require('dotenv').config();
+const path = require('path');
+const { generatePhilosopherQuote } = require('./engines/quoteEngine');
+const { generateVoice } = require('./engines/voiceEngine');
+const { createVideo } = require('./engines/videoEngine');
+const { uploadToYouTube } = require('./engines/uploadEngine');
 
 async function main() {
   try {
-    console.log('🎬 Starting Wealth Cipher automation...\n');
+    console.log('\n────────────────────────────');
+    console.log('🔥 SOPHOS - YouTube Shorts Automation');
+    console.log('────────────────────────────\n');
 
-    // 1. Get philosopher quote
-    console.log('📖 Fetching philosopher quote...');
-    const quoteData = await getQuote();
-    console.log(`✅ Quote from ${quoteData.philosopher}: "${quoteData.quote}"`);
-    console.log(`   Narration: "${quoteData.narration}"\n`);
+    // Step 1: Generate philosopher quote
+    console.log('1️⃣ Generating philosopher quote...');
+    const quoteData = await generatePhilosopherQuote();
 
-    // 2. Generate voice
-    console.log('🎙️  Generating voice narration...');
-    const voicePath = 'storage/temp/voice.mp3';
-    await generateVoice(quoteData.narration, voicePath);
-    console.log(`✅ Voice generated\n`);
+    // Step 2: Generate voice narration
+    console.log('\n2️⃣ Generating voice narration...');
+    const timestamp = Date.now();
+    const voicePath = path.join(__dirname, 'storage/audio', `voice_${timestamp}.mp3`);
+    await generateVoice(quoteData.fullNarration, voicePath);
 
-    // 3. Build video
-    console.log('🎥 Building video with FFmpeg...');
-    const videoPath = 'storage/temp/output.mp4';
-    await buildVideo({
-      quote: quoteData.quote,
-      philosopher: quoteData.philosopher,
-      voicePath,
-      outputPath: videoPath
-    });
-    console.log(`✅ Video created: ${videoPath}\n`);
+    // Step 3: Create video
+    console.log('\n3️⃣ Creating video...');
+    const videoPath = path.join(__dirname, 'storage/output', `sophos_${timestamp}.mp4`);
+    await createVideo(quoteData, voicePath, videoPath);
 
-    // 4. Upload to YouTube
-    console.log('📤 Uploading to YouTube...');
-    const videoId = await uploadVideo({
-      videoPath,
-      title: quoteData.title,
-      description: quoteData.description
-    });
-    console.log(`✅ Upload complete! Video ID: ${videoId}\n`);
+    // Step 4: Upload to YouTube
+    console.log('\n4️⃣ Uploading to YouTube...');
+    const title = `${quoteData.philosopher} on Wisdom | Sophos`;
+    const description = quoteData.description + '\n\n#philosophy #wisdom #quotes #shorts';
+    const uploadResult = await uploadToYouTube(videoPath, title, description);
 
-    // Cleanup
-    if (fs.existsSync(voicePath)) fs.unlinkSync(voicePath);
-    if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+    console.log('\n────────────────────────────');
+    console.log('✅ SUCCESS!');
+    console.log(`🎬 Video: ${uploadResult.url}`);
+    console.log(`📅 Scheduled: ${uploadResult.scheduledTime.toLocaleString()}`);
+    console.log('────────────────────────────\n');
 
-    console.log('✅ Automation complete!');
   } catch (error) {
-    console.error('❌ Error:', error);
-
-    // Send email notification on failure
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'wealthcipher@gmail.com',
-        pass: process.env.EMAIL_APP_PASSWORD || ''
-      }
-    });
-
-    await transporter.sendMail({
-      from: 'wealthcipher@gmail.com',
-      to: 'samuelmendie01@gmail.com',
-      subject: '❌ Wealth Cipher Automation Failed',
-      text: `Error: ${error.message}\n\nStack: ${error.stack}`
-    });
-
+    console.error('\n❌ ERROR:', error.message);
+    console.error(error.stack);
     process.exit(1);
   }
 }
 
-main();
+// Run if called directly
+if (require.main === module) {
+  main();
+}
+
+module.exports = { main };
