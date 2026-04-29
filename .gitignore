@@ -1,1 +1,6 @@
+node_modules/
 .env
+storage/temp/
+*.mp4
+*.mp3
+*.wav

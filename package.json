@@ -1,0 +1,1 @@
+{"name":"wealth-cipher","version":"1.0.0","main":"index.js","scripts":{"start":"node index.js"},"dependencies":{"groq-sdk":"^0.9.1","@google-cloud/text-to-speech":"^5.3.0","googleapis":"^140.0.0","dotenv":"^16.0.0","fluent-ffmpeg":"^2.1.2","nodemailer":"^6.9.0"}}
