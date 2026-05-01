@@ -7,11 +7,18 @@
     "start": "node index.js",
     "test": "node index.js"
   },
-  "keywords": ["youtube", "automation", "philosophy", "quotes", "shorts"],
+  "keywords": [
+    "youtube",
+    "automation",
+    "philosophy",
+    "quotes",
+    "shorts"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@google-cloud/text-to-speech": "^5.0.0",
+    "axios": "^1.15.2",
     "dotenv": "^16.0.0",
     "fluent-ffmpeg": "^2.1.2",
     "googleapis": "^118.0.0",

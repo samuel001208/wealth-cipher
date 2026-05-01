@@ -1,34 +1,31 @@
-const textToSpeech = require('@google-cloud/text-to-speech');
+const axios = require('axios');
 const fs = require('fs').promises;
 const path = require('path');
 
-const client = new textToSpeech.TextToSpeechClient({
-  credentials: JSON.parse(process.env.GOOGLE_TTS_CREDENTIALS)
-});
-
 async function generateVoice(text, outputPath) {
   try {
-    const request = {
-      input: { text },
-      voice: {
-        languageCode: 'en-US',
-        name: 'en-US-Neural2-D', // Male voice
-        ssmlGender: 'MALE'
+    const response = await axios({
+      method: 'POST',
+      url: `https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}`,
+      headers: {
+        'Accept': 'audio/mpeg',
+        'Content-Type': 'application/json',
+        'xi-api-key': process.env.ELEVENLABS_API_KEY
       },
-      audioConfig: {
-        audioEncoding: 'MP3',
-        speakingRate: 0.90,
-        pitch: -2.0
-      }
-    };
+      data: {
+        text: text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75
+        }
+      },
+      responseType: 'arraybuffer'
+    });
 
-    const [response] = await client.synthesizeSpeech(request);
-    await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await fs.writeFile(outputPath, response.audioContent, 'binary');
-    
-    console.log(`✓ Voice saved to: ${outputPath}`);
+    await fs.writeFile(outputPath, Buffer.from(response.data));
+    console.log(`✅ Voice generated: ${outputPath}`);
     return outputPath;
-
   } catch (error) {
     console.error('Error generating voice:', error.message);
     throw error;
